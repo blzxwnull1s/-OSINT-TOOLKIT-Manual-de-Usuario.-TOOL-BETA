@@ -1,0 +1,2 @@
+(apt install-sudo pacman) nmap whois dnsutils traceroute libimage-exiftool-perl
+(pip install-sudo pacman) sherlock-project wafw00f
