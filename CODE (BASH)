@@ -1,0 +1,782 @@
+#!/usr/bin/env bash
+# ============================================================
+#   FUCK CYBER BULLYING — Ethical OSINT Toolkit v1.0
+#   Solo para uso ético, documentación y autodefensa digital
+#   Requiere: curl, whois, nmap, dig, jq, traceroute
+# ============================================================
+
+# ── Colores ──────────────────────────────────────────────────
+R='\033[1;31m'   # rojo
+Y='\033[1;33m'   # amarillo
+G='\033[1;32m'   # verde
+C='\033[1;36m'   # cian
+M='\033[1;35m'   # magenta
+W='\033[1;37m'   # blanco
+D='\033[0;90m'   # gris oscuro
+N='\033[0m'      # reset
+BOLD='\033[1m'
+BG_RED='\033[41m'
+
+# ── Utilidades ───────────────────────────────────────────────
+clear_screen() { clear; }
+
+pause() {
+    echo ""
+    echo -e "  ${D}Presiona ENTER para continuar...${N}"
+    read -r
+}
+
+header() {
+    clear_screen
+    echo -e "${R}"
+    cat << 'EOF'
+
+         .                              .
+        /|\          SANGRE            /|\
+       / | \       POR LOS QUE        / | \
+      /  |  \      SUFREN EN         /  |  \
+     /   |   \      SILENCIO        /   |   \
+    ───────────────────────────────────────────
+
+              ░░░░░░░░░░░░░░░░░░░░░
+              ░░  ╔═══════════╗  ░░
+              ░░  ║  ◉     ◉  ║  ░░
+              ░░  ║     ▼     ║  ░░
+              ░░  ║   (   )   ║  ░░
+              ░░  ╚═════╦═════╝  ░░
+              ░░░░░░░░░░║░░░░░░░░░░
+                        ║
+                       ═╩═
+                      ═════
+                     ═══════
+                    ═════════
+EOF
+    echo -e "${N}"
+    echo -e "  ${BG_RED}${W}${BOLD}  ☠  FUCK CYBER BULLYING — OSINT TOOLKIT v1.0  ☠  ${N}"
+    echo -e "  ${D}─────────────────────────────────────────────────────${N}"
+    echo -e "  ${Y}⚠  Solo uso ético | Solo sistemas con autorización  ⚠${N}"
+    echo -e "  ${D}─────────────────────────────────────────────────────${N}"
+    echo ""
+}
+
+check_dep() {
+    local dep=$1
+    if ! command -v "$dep" &>/dev/null; then
+        echo -e "  ${R}✗ Falta dependencia: ${W}$dep${N}"
+        echo -e "  ${Y}  Instala con: sudo pacman -S $dep${N}"
+        return 1
+    fi
+    return 0
+}
+
+section() {
+    echo ""
+    echo -e "  ${C}╔══════════════════════════════════════════╗${N}"
+    echo -e "  ${C}║  ${W}${BOLD}$1${N}${C}$(printf '%*s' $((42 - ${#1})) '')║${N}"
+    echo -e "  ${C}╚══════════════════════════════════════════╝${N}"
+    echo ""
+}
+
+result_line() {
+    echo -e "  ${G}▸${N} ${W}$1:${N} ${Y}$2${N}"
+}
+
+# ── MENÚ PRINCIPAL ───────────────────────────────────────────
+main_menu() {
+    header
+    echo -e "  ${C}┌─────────────────────────────────────────────────────┐${N}"
+    echo -e "  ${C}│${W}${BOLD}                   MENÚ PRINCIPAL                    ${N}${C}│${N}"
+    echo -e "  ${C}├──────────────────────────┬──────────────────────────┤${N}"
+    echo -e "  ${C}│${G} [01]${N} IP Info / Lookup    ${C}│${G} [21]${N} Sherlock (usuario)  ${C}│${N}"
+    echo -e "  ${C}│${G} [02]${N} GeoIP de IP         ${C}│${G} [22]${N} Buscar en Pastebin  ${C}│${N}"
+    echo -e "  ${C}│${G} [03]${N} WHOIS Dominio        ${C}│${G} [23]${N} Google Dork básico  ${C}│${N}"
+    echo -e "  ${C}│${G} [04]${N} DNS Lookup           ${C}│${G} [24]${N} Info de foto (EXIF) ${C}│${N}"
+    echo -e "  ${C}│${G} [05]${N} Cabeceras HTTP       ${C}│${G} [25]${N} Hash de archivo     ${C}│${N}"
+    echo -e "  ${C}│${G} [06]${N} Ping Host            ${C}│${G} [26]${N} Detectar VPN/Proxy  ${C}│${N}"
+    echo -e "  ${C}│${G} [07]${N} Traceroute           ${C}│${G} [27]${N} TOR Exit Nodes      ${C}│${N}"
+    echo -e "  ${C}│${G} [08]${N} Puertos Abiertos     ${C}│${G} [28]${N} Buscar en Shodan    ${C}│${N}"
+    echo -e "  ${C}│${G} [09]${N} Info SSL/TLS         ${C}│${G} [29]${N} IP Negra / Blocklist${C}│${N}"
+    echo -e "  ${C}│${G} [10]${N} Subdominios OSINT    ${C}│${G} [30]${N} Reputación dominio  ${C}│${N}"
+    echo -e "  ${C}├──────────────────────────┼──────────────────────────┤${N}"
+    echo -e "  ${C}│${M} [11]${N} Info número teléfono ${C}│${M} [31]${N} Mi IP pública       ${C}│${N}"
+    echo -e "  ${C}│${M} [12]${N} GeoIP de teléfono   ${C}│${M} [32]${N} Red local info      ${C}│${N}"
+    echo -e "  ${C}│${M} [13]${N} Carrier / Operadora  ${C}│${M} [33]${N} Escaneo red local   ${C}│${N}"
+    echo -e "  ${C}│${M} [14]${N} Análisis de Email    ${C}│${M} [34]${N} Puerto específico   ${C}│${N}"
+    echo -e "  ${C}│${M} [15]${N} Cabecera de Email    ${C}│${M} [35]${N} Geoloc coordenadas  ${C}│${N}"
+    echo -e "  ${C}│${M} [16]${N} Email en brechas     ${C}│${M} [36]${N} Whois IP            ${C}│${N}"
+    echo -e "  ${C}│${M} [17]${N} robots.txt OSINT     ${C}│${M} [37]${N} Análisis de URL     ${C}│${N}"
+    echo -e "  ${C}│${M} [18]${N} Dominio → IP         ${C}│${M} [38]${N} IP desde Email      ${C}│${N}"
+    echo -e "  ${C}│${M} [19]${N} Tecnologías web      ${C}│${M} [39]${N} Generar reporte     ${C}│${N}"
+    echo -e "  ${C}│${M} [20]${N} Reputación IP        ${C}│${M} [40]${N} Ayuda y legal       ${C}│${N}"
+    echo -e "  ${C}├──────────────────────────┴──────────────────────────┤${N}"
+    echo -e "  ${C}│${R}                    [00] Salir                       ${N}${C}│${N}"
+    echo -e "  ${C}└─────────────────────────────────────────────────────┘${N}"
+    echo ""
+    echo -ne "  ${W}Selecciona opción: ${Y}"
+    read -r OPT
+    echo -e "${N}"
+}
+
+# ══════════════════════════════════════════════════════════════
+#  HERRAMIENTAS
+# ══════════════════════════════════════════════════════════════
+
+# 01 — IP Info
+tool_01() {
+    section "01 · IP Info / Lookup"
+    echo -ne "  ${W}Ingresa IP o deja vacío para tu IP: ${Y}"; read -r IP; echo -e "${N}"
+    [[ -z "$IP" ]] && IP=$(curl -s ifconfig.me)
+    local DATA; DATA=$(curl -s "https://ipapi.co/${IP}/json/")
+    result_line "IP"           "$(echo "$DATA" | jq -r '.ip')"
+    result_line "País"         "$(echo "$DATA" | jq -r '.country_name')"
+    result_line "Región"       "$(echo "$DATA" | jq -r '.region')"
+    result_line "Ciudad"       "$(echo "$DATA" | jq -r '.city')"
+    result_line "Coordenadas"  "$(echo "$DATA" | jq -r '.latitude'), $(echo "$DATA" | jq -r '.longitude')"
+    result_line "ISP"          "$(echo "$DATA" | jq -r '.org')"
+    result_line "Zona horaria" "$(echo "$DATA" | jq -r '.timezone')"
+    result_line "ASN"          "$(echo "$DATA" | jq -r '.asn')"
+    pause
+}
+
+# 02 — GeoIP de IP
+tool_02() {
+    section "02 · GeoIP de IP"
+    echo -ne "  ${W}Ingresa la IP: ${Y}"; read -r IP; echo -e "${N}"
+    local DATA; DATA=$(curl -s "http://ip-api.com/json/${IP}")
+    result_line "País"         "$(echo "$DATA" | jq -r '.country')"
+    result_line "Ciudad"       "$(echo "$DATA" | jq -r '.city')"
+    result_line "Lat/Lon"      "$(echo "$DATA" | jq -r '.lat'), $(echo "$DATA" | jq -r '.lon')"
+    result_line "ISP"          "$(echo "$DATA" | jq -r '.isp')"
+    result_line "Org"          "$(echo "$DATA" | jq -r '.org')"
+    result_line "Código zip"   "$(echo "$DATA" | jq -r '.zip')"
+    result_line "Zona horaria" "$(echo "$DATA" | jq -r '.timezone')"
+    echo ""
+    echo -e "  ${D}Google Maps: https://maps.google.com/?q=$(echo "$DATA"|jq -r '.lat'),$(echo "$DATA"|jq -r '.lon')${N}"
+    pause
+}
+
+# 03 — WHOIS Dominio
+tool_03() {
+    section "03 · WHOIS Dominio"
+    check_dep whois || { pause; return; }
+    echo -ne "  ${W}Dominio (ej: ejemplo.com): ${Y}"; read -r DOM; echo -e "${N}"
+    whois "$DOM" | grep -Ei "registrar|creation|expir|name server|registrant|email|status" | \
+        while IFS= read -r line; do echo -e "  ${G}▸${N} ${line}"; done
+    pause
+}
+
+# 04 — DNS Lookup
+tool_04() {
+    section "04 · DNS Lookup"
+    echo -ne "  ${W}Dominio: ${Y}"; read -r DOM; echo -e "${N}"
+    for TYPE in A AAAA MX NS TXT CNAME; do
+        echo -e "  ${C}── $TYPE ──${N}"
+        dig +short "$TYPE" "$DOM" | while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    done
+    pause
+}
+
+# 05 — Cabeceras HTTP
+tool_05() {
+    section "05 · Cabeceras HTTP"
+    echo -ne "  ${W}URL (con https://): ${Y}"; read -r URL; echo -e "${N}"
+    curl -sI "$URL" | while IFS= read -r line; do
+        echo -e "  ${G}▸${N} ${line}"
+    done
+    pause
+}
+
+# 06 — Ping Host
+tool_06() {
+    section "06 · Ping Host"
+    echo -ne "  ${W}Host o IP: ${Y}"; read -r HOST; echo -e "${N}"
+    ping -c 5 "$HOST"
+    pause
+}
+
+# 07 — Traceroute
+tool_07() {
+    section "07 · Traceroute"
+    check_dep traceroute || { pause; return; }
+    echo -ne "  ${W}Host o IP: ${Y}"; read -r HOST; echo -e "${N}"
+    traceroute "$HOST"
+    pause
+}
+
+# 08 — Puertos Abiertos
+tool_08() {
+    section "08 · Puertos Abiertos (top 1000)"
+    check_dep nmap || { pause; return; }
+    echo -ne "  ${W}IP o host: ${Y}"; read -r HOST; echo -e "${N}"
+    nmap -T4 --open "$HOST"
+    pause
+}
+
+# 09 — Info SSL/TLS
+tool_09() {
+    section "09 · Info SSL/TLS"
+    echo -ne "  ${W}Dominio (sin https): ${Y}"; read -r DOM; echo -e "${N}"
+    echo | openssl s_client -connect "${DOM}:443" -servername "$DOM" 2>/dev/null | \
+        openssl x509 -noout -text 2>/dev/null | \
+        grep -E "Subject:|Issuer:|Not Before|Not After|DNS:" | \
+        while IFS= read -r line; do echo -e "  ${G}▸${N} ${line}"; done
+    pause
+}
+
+# 10 — Subdominios OSINT
+tool_10() {
+    section "10 · Subdominios OSINT (crt.sh)"
+    echo -ne "  ${W}Dominio: ${Y}"; read -r DOM; echo -e "${N}"
+    curl -s "https://crt.sh/?q=%25.${DOM}&output=json" | \
+        jq -r '.[].name_value' 2>/dev/null | sort -u | \
+        while IFS= read -r sub; do echo -e "  ${G}▸${N} $sub"; done
+    pause
+}
+
+# 11 — Info número de teléfono
+tool_11() {
+    section "11 · Info Número Telefónico"
+    echo -ne "  ${W}Número (con código país, ej +573001234567): ${Y}"; read -r NUM; echo -e "${N}"
+    local DATA; DATA=$(curl -s "https://phonevalidation.abstractapi.com/v1/?api_key=demo&phone=${NUM}")
+    # Si no hay API key de abstractapi, usa numverify demo
+    if echo "$DATA" | jq -e '.valid' &>/dev/null; then
+        result_line "Válido"    "$(echo "$DATA" | jq -r '.valid')"
+        result_line "País"      "$(echo "$DATA" | jq -r '.country.name')"
+        result_line "Formato"   "$(echo "$DATA" | jq -r '.format.international')"
+        result_line "Tipo"      "$(echo "$DATA" | jq -r '.type')"
+        result_line "Operadora" "$(echo "$DATA" | jq -r '.carrier')"
+    else
+        echo -e "  ${Y}Usando fuente alternativa...${N}"
+        # Deducción básica desde prefijo
+        local CC="${NUM:1:2}"
+        echo -e "  ${G}▸${N} ${W}Número:${N} ${Y}$NUM${N}"
+        echo -e "  ${G}▸${N} ${W}Prefijo internacional detectado:${N} ${Y}+${CC}${N}"
+        echo -e "  ${D}  Para datos completos, registra una API key gratuita en:${N}"
+        echo -e "  ${D}  https://numverify.com  o  https://app.abstractapi.com${N}"
+    fi
+    pause
+}
+
+# 12 — GeoIP de teléfono
+tool_12() {
+    section "12 · GeoLocalización de Teléfono"
+    echo -ne "  ${W}Número (con código país, ej +573001234567): ${Y}"; read -r NUM; echo -e "${N}"
+    echo -e "  ${Y}⚠  La geolocalización de teléfonos está limitada por ley.${N}"
+    echo -e "  ${Y}   Solo se puede obtener país y operadora por prefijo.${N}"
+    echo ""
+    # Deducción por prefijo
+    local PREFIX="${NUM:0:3}"
+    case "$PREFIX" in
+        +57) result_line "País" "Colombia" ;;
+        +1)  result_line "País" "EE.UU. / Canadá" ;;
+        +34) result_line "País" "España" ;;
+        +52) result_line "País" "México" ;;
+        +54) result_line "País" "Argentina" ;;
+        +55) result_line "País" "Brasil" ;;
+        +44) result_line "País" "Reino Unido" ;;
+        +49) result_line "País" "Alemania" ;;
+        +33) result_line "País" "Francia" ;;
+        *)   result_line "País" "Desconocido (prefijo: ${PREFIX})" ;;
+    esac
+    result_line "Número" "$NUM"
+    echo ""
+    echo -e "  ${D}Para geolocalización precisa, se requiere orden judicial${N}"
+    echo -e "  ${D}o cooperación con operadora. APIs públicas: país/región solo.${N}"
+    pause
+}
+
+# 13 — Carrier / Operadora
+tool_13() {
+    section "13 · Carrier / Operadora de Teléfono"
+    echo -ne "  ${W}Número (con código país): ${Y}"; read -r NUM; echo -e "${N}"
+    local DATA; DATA=$(curl -s "https://api.telnyx.com/v2/number_lookup/${NUM}" 2>/dev/null)
+    if echo "$DATA" | jq -e '.data.carrier' &>/dev/null 2>&1; then
+        result_line "Operadora" "$(echo "$DATA" | jq -r '.data.carrier.name')"
+        result_line "Tipo"      "$(echo "$DATA" | jq -r '.data.line_type')"
+        result_line "País"      "$(echo "$DATA" | jq -r '.data.country_code')"
+    else
+        echo -e "  ${D}Servicio no disponible sin API key. Opciones:${N}"
+        echo -e "  ${G}▸${N} https://telnyx.com (gratis con registro)"
+        echo -e "  ${G}▸${N} https://numverify.com"
+        echo -e "  ${G}▸${N} https://hlr-lookups.com"
+    fi
+    pause
+}
+
+# 14 — Análisis de Email
+tool_14() {
+    section "14 · Análisis de Email"
+    echo -ne "  ${W}Email a analizar: ${Y}"; read -r EMAIL; echo -e "${N}"
+    local DOMAIN; DOMAIN=$(echo "$EMAIL" | cut -d'@' -f2)
+    result_line "Usuario"    "$(echo "$EMAIL" | cut -d'@' -f1)"
+    result_line "Dominio"    "$DOMAIN"
+    echo ""
+    echo -e "  ${C}── Verificando registros MX del dominio ──${N}"
+    dig +short MX "$DOMAIN" | while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    echo ""
+    echo -e "  ${C}── Verificando SPF ──${N}"
+    dig +short TXT "$DOMAIN" | grep spf | while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    pause
+}
+
+# 15 — Cabecera de Email (analizar)
+tool_15() {
+    section "15 · Análisis de Cabecera de Email"
+    echo -e "  ${Y}Pega las cabeceras del email (termina con línea vacía + ENTER):${N}"
+    echo ""
+    local HEADERS=""
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && break
+        HEADERS+="$line\n"
+    done
+    echo -e "$HEADERS" | grep -Ei "received:|from:|reply-to:|x-originating-ip:|message-id:" | \
+        while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    pause
+}
+
+# 16 — Email en brechas
+tool_16() {
+    section "16 · Email en Brechas de Datos"
+    echo -ne "  ${W}Email a verificar: ${Y}"; read -r EMAIL; echo -e "${N}"
+    echo -e "  ${Y}Verificando en haveibeenpwned.com...${N}"
+    local STATUS; STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+        -H "hibp-api-key: demo" \
+        "https://haveibeenpwned.com/api/v3/breachedaccount/${EMAIL}")
+    if [[ "$STATUS" == "200" ]]; then
+        echo -e "  ${R}✗ Email ENCONTRADO en brechas de datos${N}"
+    elif [[ "$STATUS" == "404" ]]; then
+        echo -e "  ${G}✓ Email NO encontrado en brechas conocidas${N}"
+    else
+        echo -e "  ${Y}Servicio requiere API key (gratuita en haveibeenpwned.com)${N}"
+        echo -e "  ${D}  https://haveibeenpwned.com/API/Key${N}"
+    fi
+    pause
+}
+
+# 17 — robots.txt OSINT
+tool_17() {
+    section "17 · robots.txt OSINT"
+    echo -ne "  ${W}Dominio (sin https): ${Y}"; read -r DOM; echo -e "${N}"
+    echo -e "  ${C}── https://${DOM}/robots.txt ──${N}"; echo ""
+    curl -s "https://${DOM}/robots.txt" | while IFS= read -r line; do
+        echo -e "  ${G}▸${N} ${line}"
+    done
+    pause
+}
+
+# 18 — Dominio a IP
+tool_18() {
+    section "18 · Dominio → IP"
+    echo -ne "  ${W}Dominio: ${Y}"; read -r DOM; echo -e "${N}"
+    local IPS; IPS=$(dig +short A "$DOM")
+    echo -e "  ${C}── IPv4 ──${N}"
+    echo "$IPS" | while IFS= read -r ip; do
+        echo -e "  ${G}▸${N} $ip"
+        curl -s "https://ipapi.co/${ip}/json/" | jq -r '"    País: \(.country_name) | ISP: \(.org)"' 2>/dev/null
+    done
+    echo ""
+    echo -e "  ${C}── IPv6 ──${N}"
+    dig +short AAAA "$DOM" | while IFS= read -r ip; do echo -e "  ${G}▸${N} $ip"; done
+    pause
+}
+
+# 19 — Tecnologías web
+tool_19() {
+    section "19 · Tecnologías Web"
+    echo -ne "  ${W}URL (con https://): ${Y}"; read -r URL; echo -e "${N}"
+    local HEADERS; HEADERS=$(curl -sI "$URL")
+    echo -e "  ${C}── Detección por cabeceras ──${N}"
+    echo "$HEADERS" | grep -Ei "server:|x-powered-by:|x-generator:|via:|x-framework:" | \
+        while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    echo ""
+    echo -e "  ${C}── Metaetiquetas ──${N}"
+    curl -s "$URL" | grep -oi '<meta[^>]*generator[^>]*>' | \
+        while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    pause
+}
+
+# 20 — Reputación IP
+tool_20() {
+    section "20 · Reputación de IP"
+    echo -ne "  ${W}IP a verificar: ${Y}"; read -r IP; echo -e "${N}"
+    local DATA; DATA=$(curl -s "https://api.abuseipdb.com/api/v2/check?ipAddress=${IP}&maxAgeInDays=90" \
+        -H "Key: demo" -H "Accept: application/json" 2>/dev/null)
+    if echo "$DATA" | jq -e '.data' &>/dev/null 2>&1; then
+        result_line "IP"              "$(echo "$DATA" | jq -r '.data.ipAddress')"
+        result_line "Score abuso"     "$(echo "$DATA" | jq -r '.data.abuseConfidenceScore')%"
+        result_line "Total reportes"  "$(echo "$DATA" | jq -r '.data.totalReports')"
+        result_line "País"            "$(echo "$DATA" | jq -r '.data.countryCode')"
+        result_line "ISP"             "$(echo "$DATA" | jq -r '.data.isp')"
+    else
+        echo -e "  ${D}Requiere API key gratuita: https://www.abuseipdb.com/api${N}"
+        echo ""
+        echo -e "  ${Y}Verificando en alternativas...${N}"
+        curl -s "https://ipapi.co/${IP}/json/" | jq -r '"País: \(.country_name)\nISP: \(.org)\nASN: \(.asn)"' | \
+            while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    fi
+    pause
+}
+
+# 21 — Sherlock (usuario en redes)
+tool_21() {
+    section "21 · Sherlock — Usuario en Redes Sociales"
+    if ! command -v sherlock &>/dev/null; then
+        echo -e "  ${Y}Sherlock no está instalado.${N}"
+        echo -e "  ${D}Instala con: pip install sherlock-project${N}"
+        echo -e "  ${D}O: sudo pacman -S python-sherlock (AUR)${N}"
+        pause; return
+    fi
+    echo -ne "  ${W}Nombre de usuario a buscar: ${Y}"; read -r USER; echo -e "${N}"
+    sherlock "$USER"
+    pause
+}
+
+# 22 — Buscar en Pastebin
+tool_22() {
+    section "22 · Búsqueda en Pastebin"
+    echo -ne "  ${W}Término a buscar (email, usuario, IP): ${Y}"; read -r TERM; echo -e "${N}"
+    echo -e "  ${C}URL de búsqueda generada:${N}"
+    local ENC; ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$TERM'))" 2>/dev/null || echo "$TERM")
+    echo -e "  ${G}▸${N} https://psbdmp.ws/search/${ENC}"
+    echo -e "  ${G}▸${N} https://pastebin.com/search?q=${ENC}"
+    echo ""
+    echo -e "  ${D}Abre estas URLs en tu navegador para ver resultados${N}"
+    pause
+}
+
+# 23 — Google Dork básico
+tool_23() {
+    section "23 · Google Dorks para OSINT"
+    echo -ne "  ${W}Objetivo (email, usuario, nombre, dominio): ${Y}"; read -r TARGET; echo -e "${N}"
+    local ENC; ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$TARGET'))" 2>/dev/null || echo "$TARGET")
+    echo -e "  ${C}── Dorks generados ──${N}"
+    echo -e "  ${G}▸${N} Búsqueda general:       https://google.com/search?q=\"${ENC}\""
+    echo -e "  ${G}▸${N} En redes sociales:      https://google.com/search?q=\"${ENC}\"+site:twitter.com+OR+site:instagram.com"
+    echo -e "  ${G}▸${N} Documentos expuestos:   https://google.com/search?q=\"${ENC}\"+filetype:pdf+OR+filetype:doc"
+    echo -e "  ${G}▸${N} En foros:               https://google.com/search?q=\"${ENC}\"+site:reddit.com"
+    echo -e "  ${G}▸${N} Cache de páginas:       https://webcache.googleusercontent.com/search?q=cache:\"${ENC}\""
+    pause
+}
+
+# 24 — EXIF de imagen
+tool_24() {
+    section "24 · Metadatos EXIF de Imagen"
+    if ! command -v exiftool &>/dev/null; then
+        echo -e "  ${Y}exiftool no instalado. Instala con: sudo pacman -S perl-image-exiftool${N}"
+        pause; return
+    fi
+    echo -ne "  ${W}Ruta de la imagen: ${Y}"; read -r IMG; echo -e "${N}"
+    exiftool "$IMG" | grep -Ei "GPS|Date|Camera|Software|Author|Copyright|Location" | \
+        while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    pause
+}
+
+# 25 — Hash de archivo
+tool_25() {
+    section "25 · Hash de Archivo (evidencia digital)"
+    echo -ne "  ${W}Ruta del archivo: ${Y}"; read -r FILE; echo -e "${N}"
+    if [[ ! -f "$FILE" ]]; then echo -e "  ${R}Archivo no encontrado${N}"; pause; return; fi
+    result_line "MD5"    "$(md5sum "$FILE" | awk '{print $1}')"
+    result_line "SHA1"   "$(sha1sum "$FILE" | awk '{print $1}')"
+    result_line "SHA256" "$(sha256sum "$FILE" | awk '{print $1}')"
+    result_line "Tamaño" "$(du -sh "$FILE" | awk '{print $1}')"
+    pause
+}
+
+# 26 — Detectar VPN/Proxy
+tool_26() {
+    section "26 · Detectar VPN / Proxy"
+    echo -ne "  ${W}IP a analizar: ${Y}"; read -r IP; echo -e "${N}"
+    local DATA; DATA=$(curl -s "https://proxycheck.io/v2/${IP}?vpn=1&asn=1")
+    echo "$DATA" | jq -r ".[\"${IP}\"] | \"Proxy: \(.proxy)\nVPN: \(.vpn)\nTipo: \(.type)\nPaís: \(.country)\nISP: \(.provider)\"" 2>/dev/null | \
+        while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done || \
+        echo -e "  ${D}API proxycheck.io — límite 1000/día gratis${N}"
+    pause
+}
+
+# 27 — TOR Exit Nodes
+tool_27() {
+    section "27 · Verificar IP en Lista TOR"
+    echo -ne "  ${W}IP a verificar: ${Y}"; read -r IP; echo -e "${N}"
+    local TOR_LIST; TOR_LIST=$(curl -s "https://check.torproject.org/torbulkexitlist")
+    if echo "$TOR_LIST" | grep -q "$IP"; then
+        echo -e "  ${R}✗ Esta IP ES un nodo de salida TOR${N}"
+    else
+        echo -e "  ${G}✓ Esta IP NO está en la lista de nodos TOR conocidos${N}"
+    fi
+    pause
+}
+
+# 28 — Shodan (link)
+tool_28() {
+    section "28 · Búsqueda en Shodan"
+    echo -ne "  ${W}IP o término a buscar en Shodan: ${Y}"; read -r TERM; echo -e "${N}"
+    local ENC; ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$TERM'))" 2>/dev/null || echo "$TERM")
+    echo -e "  ${G}▸${N} https://www.shodan.io/search?query=${ENC}"
+    echo -e "  ${G}▸${N} https://www.shodan.io/host/${TERM}"
+    echo ""
+    echo -e "  ${D}Abre en navegador. API CLI: sudo pacman -S python-shodan${N}"
+    pause
+}
+
+# 29 — IP en blacklist
+tool_29() {
+    section "29 · IP en Listas Negras (DNSBL)"
+    echo -ne "  ${W}IP a verificar: ${Y}"; read -r IP; echo -e "${N}"
+    local REVERSED; REVERSED=$(echo "$IP" | awk -F. '{print $4"."$3"."$2"."$1}')
+    local DNSBL_LIST=(
+        "zen.spamhaus.org"
+        "bl.spamcop.net"
+        "dnsbl.sorbs.net"
+        "b.barracudacentral.org"
+        "dnsbl-1.uceprotect.net"
+    )
+    for BL in "${DNSBL_LIST[@]}"; do
+        local RESULT; RESULT=$(dig +short "${REVERSED}.${BL}" 2>/dev/null)
+        if [[ -n "$RESULT" ]]; then
+            echo -e "  ${R}✗ En lista:${N} ${W}$BL${N} → $RESULT"
+        else
+            echo -e "  ${G}✓ OK:${N} $BL"
+        fi
+    done
+    pause
+}
+
+# 30 — Reputación de dominio
+tool_30() {
+    section "30 · Reputación de Dominio"
+    echo -ne "  ${W}Dominio: ${Y}"; read -r DOM; echo -e "${N}"
+    echo -e "  ${G}▸${N} VirusTotal:    https://www.virustotal.com/gui/domain/${DOM}"
+    echo -e "  ${G}▸${N} URLVoid:       https://www.urlvoid.com/scan/${DOM}"
+    echo -e "  ${G}▸${N} Talos:         https://talosintelligence.com/reputation_center/lookup?search=${DOM}"
+    echo ""
+    echo -e "  ${C}── Verificación básica de WHOIS ──${N}"
+    whois "$DOM" 2>/dev/null | grep -Ei "creation date|registrar|status" | \
+        while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    pause
+}
+
+# 31 — Mi IP pública
+tool_31() {
+    section "31 · Mi IP Pública"
+    local IPV4; IPV4=$(curl -s ifconfig.me)
+    local IPV6; IPV6=$(curl -s icanhazip.com 2>/dev/null || echo "N/A")
+    result_line "IPv4 pública" "$IPV4"
+    result_line "IPv6 pública" "$IPV6"
+    echo ""
+    local GEO; GEO=$(curl -s "https://ipapi.co/${IPV4}/json/")
+    result_line "País"  "$(echo "$GEO" | jq -r '.country_name')"
+    result_line "ISP"   "$(echo "$GEO" | jq -r '.org')"
+    pause
+}
+
+# 32 — Red local info
+tool_32() {
+    section "32 · Información de Red Local"
+    echo -e "  ${C}── Interfaces de red ──${N}"
+    ip addr show | grep -E "inet |inet6 " | \
+        while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    echo ""
+    echo -e "  ${C}── Gateway por defecto ──${N}"
+    ip route | grep default | while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    echo ""
+    echo -e "  ${C}── DNS configurado ──${N}"
+    cat /etc/resolv.conf | grep nameserver | while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    pause
+}
+
+# 33 — Escaneo red local
+tool_33() {
+    section "33 · Escaneo de Red Local"
+    check_dep nmap || { pause; return; }
+    local SUBNET; SUBNET=$(ip route | grep -v default | grep src | awk '{print $1}' | head -1)
+    echo -e "  ${Y}Escaneando: ${W}${SUBNET}${N}"
+    echo ""
+    nmap -sn "$SUBNET" 2>/dev/null | grep -E "Nmap scan|Host is up|report for" | \
+        while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    pause
+}
+
+# 34 — Puerto específico
+tool_34() {
+    section "34 · Verificar Puerto Específico"
+    echo -ne "  ${W}Host o IP: ${Y}"; read -r HOST
+    echo -ne "  ${W}Puerto: ${Y}"; read -r PORT; echo -e "${N}"
+    if timeout 3 bash -c "echo >/dev/tcp/${HOST}/${PORT}" 2>/dev/null; then
+        echo -e "  ${G}✓ Puerto ${PORT} está ABIERTO en ${HOST}${N}"
+    else
+        echo -e "  ${R}✗ Puerto ${PORT} está CERRADO o filtrado en ${HOST}${N}"
+    fi
+    pause
+}
+
+# 35 — Geolocalización de coordenadas
+tool_35() {
+    section "35 · Geolocalizar Coordenadas"
+    echo -ne "  ${W}Latitud: ${Y}"; read -r LAT
+    echo -ne "  ${W}Longitud: ${Y}"; read -r LON; echo -e "${N}"
+    local DATA; DATA=$(curl -s "https://nominatim.openstreetmap.org/reverse?lat=${LAT}&lon=${LON}&format=json")
+    result_line "Dirección"   "$(echo "$DATA" | jq -r '.display_name')"
+    result_line "País"        "$(echo "$DATA" | jq -r '.address.country')"
+    result_line "Ciudad"      "$(echo "$DATA" | jq -r '.address.city // .address.town // .address.village')"
+    result_line "Google Maps" "https://maps.google.com/?q=${LAT},${LON}"
+    pause
+}
+
+# 36 — Whois de IP
+tool_36() {
+    section "36 · WHOIS de IP"
+    check_dep whois || { pause; return; }
+    echo -ne "  ${W}IP: ${Y}"; read -r IP; echo -e "${N}"
+    whois "$IP" | grep -Ei "netname|country|org-name|address|abuse|phone|inetnum|cidr" | \
+        while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    pause
+}
+
+# 37 — Análisis de URL
+tool_37() {
+    section "37 · Análisis de URL"
+    echo -ne "  ${W}URL completa: ${Y}"; read -r URL; echo -e "${N}"
+    local DOMAIN; DOMAIN=$(echo "$URL" | sed 's|https\?://||' | cut -d'/' -f1)
+    result_line "Dominio"    "$DOMAIN"
+    result_line "IP"         "$(dig +short A "$DOMAIN" | head -1)"
+    echo ""
+    echo -e "  ${C}── Redirecciones ──${N}"
+    curl -sIL "$URL" | grep -i "location:" | while IFS= read -r l; do echo -e "  ${G}▸${N} $l"; done
+    echo ""
+    echo -e "  ${C}── Verificar en VirusTotal ──${N}"
+    local ENC; ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$URL'))" 2>/dev/null || echo "$URL")
+    echo -e "  ${G}▸${N} https://www.virustotal.com/gui/url/${ENC}/detection"
+    pause
+}
+
+# 38 — IP desde Email
+tool_38() {
+    section "38 · Extraer IP desde Cabecera de Email"
+    echo -e "  ${Y}Pega el campo 'Received:' de las cabeceras del email:${N}"
+    echo -ne "  ${Y}> ${W}"; read -r HEADER; echo -e "${N}"
+    echo "$HEADER" | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | \
+        while IFS= read -r ip; do
+            echo -e "  ${G}▸${N} IP detectada: ${W}$ip${N}"
+            curl -s "https://ipapi.co/${ip}/json/" | jq -r '"  País: \(.country_name) | ISP: \(.org)"' 2>/dev/null
+        done
+    pause
+}
+
+# 39 — Generar reporte
+tool_39() {
+    section "39 · Generar Reporte de Sesión"
+    local REPORT_FILE="reporte_fcb_$(date +%Y%m%d_%H%M%S).txt"
+    {
+        echo "=================================="
+        echo "  FUCK CYBER BULLYING — REPORTE"
+        echo "  Generado: $(date)"
+        echo "=================================="
+        echo ""
+        echo "Este reporte fue generado con fines éticos"
+        echo "para documentar y combatir el ciberacoso."
+        echo ""
+        echo "Mi IP pública: $(curl -s ifconfig.me)"
+        echo "Fecha/Hora:    $(date)"
+        echo "Hostname:      $(hostname)"
+        echo ""
+        echo "Para reportar ciberacoso en Colombia:"
+        echo "  ▸ Centro Cibernético Policial: www.ccp.gov.co"
+        echo "  ▸ Te Protejo: www.teprotejo.org"
+        echo "  ▸ Línea 141 (Bienestar Familiar)"
+        echo ""
+    } > "$REPORT_FILE"
+    echo -e "  ${G}✓ Reporte guardado en: ${W}$REPORT_FILE${N}"
+    pause
+}
+
+# 40 — Ayuda y legal
+tool_40() {
+    section "40 · Ayuda, Legal y Recursos Anti-Ciberacoso"
+    echo -e "  ${R}${BOLD}AVISO LEGAL${N}"
+    echo -e "  ${D}Esta herramienta es SOLO para uso ético y autorizado.${N}"
+    echo -e "  ${D}El uso indebido puede constituir delito informático.${N}"
+    echo ""
+    echo -e "  ${C}${BOLD}DEPENDENCIAS REQUERIDAS${N}"
+    local DEPS=(curl jq whois nmap dig traceroute openssl python3)
+    for DEP in "${DEPS[@]}"; do
+        if command -v "$DEP" &>/dev/null; then
+            echo -e "  ${G}✓${N} $DEP"
+        else
+            echo -e "  ${R}✗${N} $DEP ${D}(instala: sudo pacman -S $DEP)${N}"
+        fi
+    done
+    echo ""
+    echo -e "  ${C}${BOLD}RECURSOS ANTI-CIBERACOSO${N}"
+    echo -e "  ${G}▸${N} Colombia:       www.teprotejo.org | Línea 141"
+    echo -e "  ${G}▸${N} Policía:        www.ccp.gov.co (Centro Cibernético)"
+    echo -e "  ${G}▸${N} Internacional:  www.stopbullying.gov"
+    echo -e "  ${G}▸${N} Reportar en IG: https://help.instagram.com"
+    echo -e "  ${G}▸${N} Reportar en TW: https://help.twitter.com"
+    echo ""
+    echo -e "  ${M}${BOLD}APIs GRATUITAS RECOMENDADAS${N}"
+    echo -e "  ${G}▸${N} https://www.abuseipdb.com/api       (reputación IP)"
+    echo -e "  ${G}▸${N} https://haveibeenpwned.com/API/Key  (brechas email)"
+    echo -e "  ${G}▸${N} https://numverify.com               (info teléfono)"
+    echo -e "  ${G}▸${N} https://app.abstractapi.com         (múltiple)"
+    pause
+}
+
+# ══════════════════════════════════════════════════════════════
+#  BUCLE PRINCIPAL
+# ══════════════════════════════════════════════════════════════
+while true; do
+    main_menu
+    case "$OPT" in
+        1|01)   tool_01 ;;
+        2|02)   tool_02 ;;
+        3|03)   tool_03 ;;
+        4|04)   tool_04 ;;
+        5|05)   tool_05 ;;
+        6|06)   tool_06 ;;
+        7|07)   tool_07 ;;
+        8|08)   tool_08 ;;
+        9|09)   tool_09 ;;
+        10)     tool_10 ;;
+        11)     tool_11 ;;
+        12)     tool_12 ;;
+        13)     tool_13 ;;
+        14)     tool_14 ;;
+        15)     tool_15 ;;
+        16)     tool_16 ;;
+        17)     tool_17 ;;
+        18)     tool_18 ;;
+        19)     tool_19 ;;
+        20)     tool_20 ;;
+        21)     tool_21 ;;
+        22)     tool_22 ;;
+        23)     tool_23 ;;
+        24)     tool_24 ;;
+        25)     tool_25 ;;
+        26)     tool_26 ;;
+        27)     tool_27 ;;
+        28)     tool_28 ;;
+        29)     tool_29 ;;
+        30)     tool_30 ;;
+        31)     tool_31 ;;
+        32)     tool_32 ;;
+        33)     tool_33 ;;
+        34)     tool_34 ;;
+        35)     tool_35 ;;
+        36)     tool_36 ;;
+        37)     tool_37 ;;
+        38)     tool_38 ;;
+        39)     tool_39 ;;
+        40)     tool_40 ;;
+        0|00)
+            clear_screen
+            echo -e "\n  ${R}${BOLD}FUCK CYBER BULLYING — Hasta pronto.${N}"
+            echo -e "  ${D}Sigue ayudando a quienes lo necesitan. 💪${N}\n"
+            exit 0
+            ;;
+        *)
+            echo -e "  ${R}Opción inválida${N}"
+            sleep 1
+            ;;
+    esac
+done
